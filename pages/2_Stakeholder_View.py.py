@@ -246,7 +246,7 @@ if not df.empty and "ts" in df.columns:
     open_ts = df["ts"].min()
     open_df = df[df["ts"] == open_ts].copy()
 else:
-    latest_ts = pd.Timestamp.utcnow().tz_localize("UTC")
+    latest_ts = pd.Timestamp.now(tz="UTC")
 
 # numeric cleaning
 for dff in [df, latest, prev, open_df]:
