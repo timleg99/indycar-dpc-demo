@@ -1,0 +1,232 @@
+import base64
+import sqlite3
+import time
+import re
+from pathlib import Path
+
+import pandas as pd
+import streamlit as st
+import plotly.graph_objects as go
+import streamlit.components.v1 as components
+
+DB_FILE = "dpc_demo.sqlite3"
+
+APP_TITLE = "Driver Performance Contracts (DPC)"
+SUBTITLE = "Stakeholder View"
+APP_TICKER = "JHR-DPC"
+
+ASSETS_DIR = Path("assets")
+LOGOS_DIR = ASSETS_DIR / "logos"
+
+ISO3_TO_ISO2 = {
+    "USA": "US",
+    "NZL": "NZ",
+    "SWE": "SE",
+    "ESP": "ES",
+    "MEX": "MX",
+    "DEN": "DK",
+    "NLD": "NL",
+    "CAN": "CA",
+    "AUS": "AU",
+    "GBR": "GB",
+    "ISR": "IL",
+    "CAY": "KY"
+}
+
+TEAM_LOGO_FILES = {
+    "Juncos Hollinger Racing": "jhr.png",
+    "JHR": "jhr.png",
+    "Team Penske": "penske.png",
+    "Chip Ganassi Racing": "ganassi.png",
+    "Arrow McLaren": "mclaren.png",
+    "Andretti Global": "andretti.png",
+    "Meyer Shank Racing": "msr.png",
+    "Rahal Letterman Lanigan Racing": "rll.png",
+    "A.J. Foyt Enterprises": "foyt.png",
+    "Dale Coyne Racing": "coyne.png",
+    "Ed Carpenter Racing": "ecr.png",
+    "PREMA Racing": "prema.png",
+}
+
+# ---------------- DB ----------------
+
+def connect_db():
+    return sqlite3.connect(DB_FILE, check_same_thread=False)
+
+def read_ticks(conn):
+    return pd.read_sql_query("SELECT * FROM ticks ORDER BY id ASC", conn)
+
+# ---------------- Helpers ----------------
+
+def esc(s):
+    return (str(s) if s else "").replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+
+def ticker_for(driver):
+    last = str(driver).split()[-1].upper()
+    last = re.sub(r"[^A-Z0-9]", "", last)[:6]
+    return f"DPC-{last}"
+
+def clean_driver_name(driver):
+    s = str(driver or "").strip()
+    parts = s.split()
+    if len(parts) >= 2:
+        p0 = parts[0]
+        if len(p0) in (2,3) and p0.isalpha():
+            return " ".join(parts[1:])
+    return s
+
+def iso2_flag(code):
+    return chr(127397 + ord(code[0])) + chr(127397 + ord(code[1]))
+
+def country_to_flag(country):
+    if not country:
+        return ""
+    c = country.strip().upper()
+    if len(c) == 2:
+        return iso2_flag(c)
+    if len(c) == 3 and c in ISO3_TO_ISO2:
+        return iso2_flag(ISO3_TO_ISO2[c])
+    return ""
+
+def file_to_data_uri(path):
+    if not path.exists():
+        return ""
+    data = path.read_bytes()
+    b64 = base64.b64encode(data).decode()
+    return f"data:image/png;base64,{b64}"
+
+def team_logo_uri(team):
+    fname = TEAM_LOGO_FILES.get(str(team), "")
+    if not fname:
+        return ""
+    path = LOGOS_DIR / fname
+    return file_to_data_uri(path)
+
+# ---------------- Page ----------------
+
+st.set_page_config(page_title="DPC Stakeholder View", layout="wide")
+
+st.markdown("""
+<style>
+div[data-testid="stAppViewContainer"]{
+  background: linear-gradient(180deg,#06070a,#0a0b10);
+  color:#f2f4ff;
+}
+.neon { color:#67f5b5 !important; }
+.headerbar{
+  width:100%;
+  border-radius:18px;
+  padding:14px 18px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.05);
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+.brandlogo{ height:32px; }
+.pill{
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.05);
+}
+</style>
+""", unsafe_allow_html=True)
+
+conn = connect_db()
+df = read_ticks(conn)
+
+if df.empty:
+    st.warning("No published marks yet.")
+    st.stop()
+
+df["ts_utc_dt"] = pd.to_datetime(df["ts_utc"], utc=True)
+latest = df[df["ts_utc_dt"] == df["ts_utc_dt"].max()].copy()
+
+# Header
+logo_uri = team_logo_uri("JHR")
+logo_html = f"<img class='brandlogo' src='{logo_uri}' />" if logo_uri else "<b>JHR</b>"
+
+st.markdown(f"""
+<div class="headerbar">
+  {logo_html}
+  <div>
+    <div style="font-size:20px;font-weight:900;">
+      Juncos Hollinger Racing — {APP_TITLE}
+    </div>
+    <div style="font-size:12px;opacity:.7;">{SUBTITLE}</div>
+  </div>
+  <div style="flex:1;"></div>
+  <div class="pill neon">{APP_TICKER}</div>
+</div>
+""", unsafe_allow_html=True)
+
+st.divider()
+st.markdown("### Current DPC Fair Values")
+
+latest["fv_dollars"] = pd.to_numeric(latest["fv_dollars"], errors="coerce").fillna(0)
+latest = latest.sort_values("fv_dollars", ascending=False)
+
+rows = []
+
+for _, r in latest.iterrows():
+    driver = clean_driver_name(r["driver"])
+    flag = country_to_flag(r["country"])
+    logo = team_logo_uri(r["team"])
+
+    team_cell = f"<img src='{logo}' style='height:24px;'/>" if logo else esc(r["team"])
+
+    rows.append(f"""
+<tr>
+<td>{flag} {esc(driver)}</td>
+<td>{ticker_for(driver)}</td>
+<td>{team_cell}</td>
+<td>{int(r["grid_pos"])}</td>
+<td class='neon'>{int(r["position"])}</td>
+<td class='neon'>${float(r["fv_dollars"]):,.2f}</td>
+</tr>
+""")
+
+table_html = f"""
+<table style="width:100%;border-collapse:collapse;">
+<tr style="background:rgba(255,255,255,.05);">
+<th>Driver</th>
+<th>Ticker</th>
+<th>Team</th>
+<th>Start</th>
+<th>Now</th>
+<th>DPC Fair Value</th>
+</tr>
+{''.join(rows)}
+</table>
+"""
+
+components.html(table_html, height=700, scrolling=True)
+
+st.divider()
+st.markdown("### Fair Value History")
+
+drivers = sorted(df["driver"].unique())
+sel = st.selectbox("Select driver", drivers)
+
+hist = df[df["driver"] == sel].copy()
+hist["fv_dollars"] = pd.to_numeric(hist["fv_dollars"], errors="coerce").fillna(0)
+
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    x=pd.to_datetime(hist["ts_utc"], utc=True),
+    y=hist["fv_dollars"],
+    mode="lines+markers",
+    line=dict(color="#67f5b5", width=3),
+    marker=dict(size=8)
+))
+
+fig.update_layout(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0.2)",
+    font=dict(color="#F3F6FF")
+)
+
+fig.update_xaxes(gridcolor="rgba(255,255,255,0.15)")
+fig.update_yaxes(gridcolor="rgba(255,255,255,0.15)", tickprefix="$")
+
+st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
