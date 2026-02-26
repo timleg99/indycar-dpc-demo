@@ -681,8 +681,8 @@ else:
     # compute deltas, render visuals, etc.
 
 # Compute deltas
-rows = []
-for _, r in latest.iterrows():
+    rows = []
+    for _, r in latest.iterrows():
     dname = clean_driver_name(r.get("driver", ""))
     dk = normalize_driver_key(dname)
     nowv = float(r.get("fv_dollars", 0.0) or 0.0)
