@@ -403,6 +403,58 @@ st.markdown(
     div[data-testid="stToolbar"] { display: none; }
     div[data-testid="stDecoration"] { display: none; }
 
+    /* --- Scroll safety (prevents "no scroll" bugs) --- */
+    html, body { overflow: auto !important; }
+    div[data-testid="stApp"], div[data-testid="stAppViewContainer"], section.main {
+      overflow: auto !important;
+    }
+    /* allow content to flow vertically */
+    .block-container { overflow: visible !important; }
+
+    /* --- Hero/header responsiveness (prevents mobile smooshing) --- */
+    .hero_card{
+      display:flex;
+      align-items:center;
+      gap:16px;
+    }
+    .hero_left,.hero_right{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex: 0 0 auto;
+    }
+    .hero_center{
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .hero_title{
+      font-size: 24px;
+      font-weight: 995;
+      line-height: 1.10;
+      letter-spacing: .01em;
+    }
+    .hero_sub{
+      font-size: 13px;
+      margin-top: 3px;
+      opacity: .78;
+      font-weight: 700;
+    }
+
+    @media (max-width: 720px){
+      .hero_card{
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 10px;
+      }
+      .hero_center{ text-align:center; }
+      .hero_title{ font-size: 20px; }
+      .team_logo_wrap{
+        min-width: 0 !important;
+        max-width: 320px;
+      }
+    }
+
     .block-container {
       padding-top: 0.45rem !important;
       padding-bottom: 2rem !important;
@@ -1005,15 +1057,14 @@ else:
     race_html = ""
 
 st.markdown(
-    f"<div class='glass_card' style='padding:{16 if tv_safe else 14}px {20 if tv_safe else 18}px; display:flex;align-items:center;gap:16px;'>"
-    f"<div style='display:flex;align-items:center;justify-content:center;'>{jhr_html}</div>"
-    f"<div style='min-width:0;'>"
-    f"  <div style='font-size:24px;font-weight:995;line-height:1.10;letter-spacing:.01em;'>{APP_TITLE}</div>"
-    f"  <div class='muted' style='font-size:13px;margin-top:3px;'>{SUBTITLE}</div>"
+    f"<div class='glass_card hero_card' style='padding:{16 if tv_safe else 14}px {20 if tv_safe else 18}px;'>"
+    f"<div class='hero_left'>{jhr_html}</div>"
+    f"<div class='hero_center'>"
+    f"  <div class='hero_title'>{APP_TITLE}</div>"
+    f"  <div class='hero_sub'>{SUBTITLE}</div>"
     f"  <div class='neon_rule'></div>"
     f"</div>"
-    f"<div style='flex:1;'></div>"
-    f"<div style='display:flex;align-items:center;justify-content:center;'>{race_html}</div>"
+    f"<div class='hero_right'>{race_html}</div>"
     f"</div>",
     unsafe_allow_html=True,
 )
