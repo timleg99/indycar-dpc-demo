@@ -677,7 +677,7 @@ st.markdown(
 
 if latest.empty:
     st.warning("No tick data found yet. Ensure your DB is present and 'ticks' table has rows.")
-else:
+
     # compute deltas, render visuals, etc.
 
 # Compute deltas
