@@ -226,8 +226,11 @@ with st.expander("Controls", expanded=False):
         compact_cards = st.toggle("Compact", value=False)
 
 df = read_table("ticks")
-st.write("DEBUG: ticks rows =", 0 if df is None else len(df))
-st.write("DEBUG: ticks cols =", [] if df is None else list(df.columns))
+
+# --- Normalize timestamp column name ---
+if "ts" not in df.columns and "ts_utc" in df.columns:
+    df = df.rename(columns={"ts_utc": "ts"})
+
 latest = pd.DataFrame()
 prev = pd.DataFrame()
 open_df = pd.DataFrame()
