@@ -681,8 +681,8 @@ else:
     # compute deltas, render visuals, etc.
 
 # Compute deltas
-    rows = []
-    for _, r in latest.iterrows():
+rows = []
+for _, r in latest.iterrows():
     dname = clean_driver_name(r.get("driver", ""))
     dk = normalize_driver_key(dname)
     nowv = float(r.get("fv_dollars", 0.0) or 0.0)
@@ -716,7 +716,11 @@ else:
         )
     )
 
-cards = pd.DataFrame(rows).sort_values("fv", ascending=False).reset_index(drop=True)
+cards = (
+    pd.DataFrame(rows)
+    .sort_values("fv", ascending=False)
+    .reset_index(drop=True)
+)
 
 # Display cards
 for i, r in cards.iterrows():
@@ -739,6 +743,7 @@ for i, r in cards.iterrows():
     spark_html = ""
     if show_sparklines and dk in spark_map and not spark_map[dk].empty:
         g = spark_map[dk]
+
         # render sparkline as mini plotly
         fig_s = go.Figure()
         fig_s.add_trace(
@@ -759,10 +764,15 @@ for i, r in cards.iterrows():
             yaxis=dict(visible=False),
             showlegend=False,
         )
+        # Note: you're using HTML for spark placement; chart is created but not rendered here.
         spark_html = "<div class='spark'></div>"
 
     pulse = abs(float(r["delta"])) >= PULSE_ABS_DOLLAR_THRESHOLD
-    pulse_glow = "box-shadow: 0 0 0 1px rgba(124,246,194,0.18), 0 18px 40px rgba(0,0,0,0.55);" if pulse else ""
+    pulse_glow = (
+        "box-shadow: 0 0 0 1px rgba(124,246,194,0.18), 0 18px 40px rgba(0,0,0,0.55);"
+        if pulse
+        else ""
+    )
 
     st.markdown(
         f"""
