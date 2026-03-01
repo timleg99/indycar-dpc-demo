@@ -25,7 +25,7 @@ SPARK_N = 24  # points in sparkline (last N ticks for each driver)
 
 ISO3_TO_ISO2 = {
     "USA": "US", "NZL": "NZ", "SWE": "SE", "ESP": "ES", "MEX": "MX", "DEN": "DK",
-    "NLD": "NL", "CAN": "CA", "AUS": "AU", "GBR": "GB", "ISR": "IL", "CAY": "KY",
+    "NLD": "NL", "CAN": "CA", "AUS": "AU", "GBR": "GB", "ISR": "IL", "CAY": "KY", "NOR": "NO", "FRA": "FR", "BRA": "BR", "GER": "DE", "DEU": "DE",
 }
 
 TEAM_KEY = {
